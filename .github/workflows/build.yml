@@ -1,0 +1,50 @@
+name: Build NanaPlay APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch/tag/commit dari FahriAdison/NanaPlay (default: nanaplay)'
+        required: false
+        default: 'nanaplay'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout NanaPlay source
+        uses: actions/checkout@v4
+        with:
+          repository: FahriAdison/NanaPlay
+          ref: ${{ inputs.ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Restore keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/nanaplay.keystore
+          echo "NANAPLAY_KEYSTORE_PATH=/tmp/nanaplay.keystore" >> $GITHUB_ENV
+
+      - name: Build release APK
+        working-directory: android
+        env:
+          NANAPLAY_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          NANAPLAY_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          NANAPLAY_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # Skip foojay toolchain auto-download (blocked); use installed JDK
+          sed -i 's/^foojay/#foojay/' settings.gradle.kts 2>/dev/null || true
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: NanaPlay-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
