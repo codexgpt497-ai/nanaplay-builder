@@ -29,14 +29,20 @@ jobs:
 
       - name: Restore keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/nanaplay.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/nanaplay.keystore 2>/dev/null
           echo "NANAPLAY_KEYSTORE_PATH=/tmp/nanaplay.keystore" >> $GITHUB_ENV
-          # Validate keystore
+          # Diagnostic (no secret values printed)
+          echo "KEYSTORE_BASE64 set: $([ -n "${{ secrets.KEYSTORE_BASE64 }}" ] && echo "yes (${#KEYSTORE_BASE64} chars)" || echo "NO")"
+          echo "KEYSTORE_PASSWORD set: $([ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] && echo yes || echo "NO")"
+          echo "KEY_ALIAS set: $([ -n "${{ secrets.KEY_ALIAS }}" ] && echo yes || echo "NO")"
+          echo "KEY_PASSWORD set: $([ -n "${{ secrets.KEY_PASSWORD }}" ] && echo yes || echo "NO")"
           if [ ! -s /tmp/nanaplay.keystore ]; then
-            echo "❌ KEYSTORE_BASE64 secret is empty or invalid!"
+            echo "❌ Keystore file empty or invalid base64!"
             exit 1
           fi
-          echo "✅ Keystore restored ($(wc -c < /tmp/nanaplay.keystore) bytes)"
+          echo "✅ Keystore file OK ($(wc -c < /tmp/nanaplay.keystore) bytes)"
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build release APK
         working-directory: android
