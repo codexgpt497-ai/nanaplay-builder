@@ -27,6 +27,30 @@ jobs:
       - name: Accept Android licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
+      - name: Patch signing config for CI
+        working-directory: android
+        run: |
+          # Replace hardcoded keystore with env-var-driven config
+          python3 - << 'EOF'
+          import re
+          p = 'app/build.gradle.kts'
+          s = open(p).read()
+          old = '''            storeFile = file("/home/hatch/workspace/opennow/keystore/nanaplay.keystore")
+                      storePassword = "nanaplay2026"
+                      keyAlias = "nanaplay"
+                      keyPassword = "nanaplay2026"'''
+          new = '''            storeFile = file(System.getenv("NANAPLAY_KEYSTORE_PATH") ?: "/tmp/nanaplay.keystore")
+                      storePassword = System.getenv("NANAPLAY_KEYSTORE_PASSWORD") ?: ""
+                      keyAlias = System.getenv("NANAPLAY_KEY_ALIAS") ?: "nanaplay"
+                      keyPassword = System.getenv("NANAPLAY_KEY_PASSWORD") ?: ""'''
+          if old in s:
+              s = s.replace(old, new)
+              open(p, 'w').write(s)
+              print("patched signing config")
+          else:
+              print("WARNING: signing config pattern not found!")
+          EOF
+
       - name: Restore keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/nanaplay.keystore 2>/dev/null
