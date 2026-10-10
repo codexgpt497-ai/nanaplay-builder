@@ -31,6 +31,12 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/nanaplay.keystore
           echo "NANAPLAY_KEYSTORE_PATH=/tmp/nanaplay.keystore" >> $GITHUB_ENV
+          # Validate keystore
+          if [ ! -s /tmp/nanaplay.keystore ]; then
+            echo "❌ KEYSTORE_BASE64 secret is empty or invalid!"
+            exit 1
+          fi
+          echo "✅ Keystore restored ($(wc -c < /tmp/nanaplay.keystore) bytes)"
 
       - name: Build release APK
         working-directory: android
